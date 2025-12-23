@@ -132,11 +132,18 @@ function loadPatientsList(filterVal) {
     // Si elegimos un puesto específico, pedimos ese puesto.
 
     let requestPuesto = filterVal;
-    if (!requestPuesto || requestPuesto === "TODOS") {
-        requestPuesto = "Coordinador PMC";
+
+    // SEGURIDAD: Si el usuario NO es admin ("Coordinador PMC"), 
+    // SIEMPRE debe ver solo su puesto, sin importar qué filtro se solicite.
+    if (appState.puesto && appState.puesto !== "Coordinador PMC") {
+        requestPuesto = appState.puesto;
     } else {
-        // Si el usuario normal no es admin, usa su propio puesto
-        if (appState.puesto !== "Coordinador PMC") requestPuesto = appState.puesto;
+        // Si ES Admin (o user nulo por error, aunque no debería):
+        // Si el filtro es "TODOS" (o null), pedimos con la clave de admin para ver todo.
+        if (!requestPuesto || requestPuesto === "TODOS") {
+            requestPuesto = "Coordinador PMC";
+        }
+        // Si seleccionó un puesto específico, requestPuesto ya lo tiene.
     }
 
     if (appState.puesto === "Coordinador PMC") showLoading("Analizando datos...");
