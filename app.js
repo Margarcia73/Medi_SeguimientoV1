@@ -505,7 +505,7 @@ function renderHistoryModal(patientData) {
             html += `
             <div class="history-item">
                 <div class="history-date">
-                    <span>${v.fecha}</span>
+                    <span>${formatDateLocal(v.fecha)}</span>
                     <span style="font-weight:normal; font-size:0.85rem;">${v.diagnostico}</span>
                 </div>
                 <div class="history-detail"><strong>Signos:</strong> PA: ${v.pa} | FC: ${v.fc} | SpO2: ${v.spo2}% | Glu: ${v.glucosa || '-'}</div>
@@ -520,51 +520,73 @@ function renderHistoryModal(patientData) {
     historyModal.classList.remove('hidden');
 }
 
-// PDF
-document.getElementById('btn-select-all').addEventListener('click', () => { document.querySelectorAll('.pat-check').forEach(c => c.checked = true); });
-document.getElementById('btn-deselect-all').addEventListener('click', () => { document.querySelectorAll('.pat-check').forEach(c => c.checked = false); });
-document.getElementById('btn-generate-pdf').addEventListener('click', () => {
+// PDF: Eventos para Admin y Students (IDs corregidos)
+// Admin
+document.getElementById('btn-select-all-admin').addEventListener('click', () => toggleChecks(true));
+document.getElementById('btn-deselect-all-admin').addEventListener('click', () => toggleChecks(false));
+document.getElementById('btn-generate-pdf-admin').addEventListener('click', generateReportAction);
+
+// Students
+document.getElementById('btn-select-all-user').addEventListener('click', () => toggleChecks(true));
+document.getElementById('btn-deselect-all-user').addEventListener('click', () => toggleChecks(false));
+document.getElementById('btn-generate-pdf-user').addEventListener('click', generateReportAction);
+
+function toggleChecks(state) {
+    document.querySelectorAll('.pat-check').forEach(c => c.checked = state);
+}
+
+function generateReportAction() {
     const checked = document.querySelectorAll('.pat-check:checked');
     if (checked.length === 0) return alert("Seleccione pacientes.");
     const ids = Array.from(checked).map(c => c.value);
-    // Si ya tenemos fullDataCache, no pedimos de nuevo (optimización)
+
+    // Si ya tenemos fullDataCache (Admin optimizado), usamos eso.
     if (appState.fullDataCache && Object.keys(appState.fullDataCache).length >= ids.length) {
-        // Filtrar solo los seleccionados del cache
         const subset = {};
         ids.forEach(id => { if (appState.fullDataCache[id]) subset[id] = appState.fullDataCache[id]; });
         generatePDF(subset);
     } else {
+        // Estudiantes o Admin sin cache (aunque Admin suele cargar al inicio)
         showLoading(`Recuperando datos...`);
         postData({ action: 'getHistoryBatch', ids: ids.join(',') }).then(resp => {
-            hideLoading(); generatePDF(resp.data);
+            hideLoading();
+            if (resp.success) generatePDF(resp.data);
+            else alert("Error al traer datos para reporte.");
         });
     }
-});
+}
 
 // PDF: FUNCIONALIDAD CONTINUA (Un paciente tras otro)
 function generatePDF(dataMap) {
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('p', 'mm', 'letter'); // Cambiado a Vertical (Portrait) para lista larga, o 'l' si tabla muy ancha. Usaremos 'l' si prefieres landscape. 
-    // Usuario no especificó orientación, pero "un paciente bajo otro" sugiere lista vertical. 
-    // Sin embargo, las tablas médicas suelen ser anchas. Mantendré Landscape 'l' por seguridad de columnas.
-    // Update: Mejor Landscape para que quepan las columnas de signos vitales.
+    const doc = new jsPDF('p', 'mm', 'letter'); // Landscape 'l' o Portrait 'p' según necesidad.
+    // Usuario prefiere 'p' (default) o se ajusta. Mantenemos 'l' si ya estaba o 'p' si cambiamos.
+    // El codigo anterior tenia 'p' pero header decia 'l' en comentario. El usuario pidio ajustes.
+    // Usaremos 'l' (Landscape) para que quepa la glucosa y todo.
+    doc.deletePage(1); doc.addPage('letter', 'l'); // Forzar landscape
 
-    // Configuración inicial
-    const pageWidth = 279; // Letter Landscape
+    const pageWidth = 279;
     const pageHeight = 216;
     const margin = 14;
     let cursorY = 20;
 
-    // Título Principal del Documento
+    // Título Principal
     doc.setFillColor(13, 27, 42);
     doc.rect(0, 0, pageWidth, 25, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
     doc.text("Reporte Consolidado de Pacientes", margin, 12);
     doc.setFontSize(10);
-    doc.text(`Generado el: ${new Date().toLocaleDateString()} | Filtro: ${document.getElementById('admin-puesto-filter').value}`, margin, 19);
+    // Fecha dd/mm/aaaa
+    const todayStr = new Date().toLocaleDateString('es-ES');
 
-    cursorY = 35; // Inicio contenido
+    // Filtro Puesto Label
+    const filterLabel = appState.puesto === "Coordinador PMC" ?
+        document.getElementById('admin-puesto-filter').value : appState.puesto;
+
+    doc.text(`Generado el: ${todayStr} | Filtro: ${filterLabel}`, margin, 19);
+
+    cursorY = 35;
 
     for (const [id, infoObj] of Object.entries(dataMap)) {
         if (!infoObj.info) continue;
@@ -572,10 +594,8 @@ function generatePDF(dataMap) {
         const p = infoObj.info;
         const historial = infoObj.visitas;
 
-        // Calcular espacio necesario para cabecera paciente (aprox 15mm) + al menos 1 fila tabla (15mm)
-        // Si no cabe, nueva página
         if (cursorY + 30 > pageHeight - margin) {
-            doc.addPage();
+            doc.addPage('letter', 'l');
             cursorY = 20;
         }
 
@@ -588,17 +608,17 @@ function generatePDF(dataMap) {
         doc.setFontSize(10);
         doc.text(`ID: ${p.dpi || id} | Puesto: ${p.puesto}`, margin + 100, cursorY);
 
-        cursorY += 5; // Espacio entre titulo y tabla
+        cursorY += 5;
 
-        // Cuerpo tabla
+        // Cuerpo tabla con FECHA FORMATO dd/mm/aaaa
         const body = historial.map(h => [
-            h.fecha,
+            formatDateLocal(h.fecha), // <--- FORMATO CORREGIDO
             h.diagnostico,
             h.pa,
             h.fc,
             h.fr,
             h.spo2,
-            h.glucosa || '-', // Nueva columna
+            h.glucosa || '-',
             h.tratamiento,
             h.cambios || '-',
             h.comentarios
@@ -607,24 +627,32 @@ function generatePDF(dataMap) {
         doc.autoTable({
             startY: cursorY,
             head: [['Fecha', 'Condición', 'PA', 'FC', 'FR', 'SpO2', 'Glu', 'Tratamiento', 'Cambios', 'Obs']],
-            // Header actualizado
             body: body,
             theme: 'grid',
             styles: { fontSize: 8, cellPadding: 2 },
             headStyles: { fillColor: [65, 90, 119] },
             columnStyles: {
-                7: { cellWidth: 45 }, // Tratamiento (Indice movido por nueva col) -> 7 es Tratamiento
-                9: { cellWidth: 35 }  // Obs -> 9 es Obs
+                7: { cellWidth: 45 },
+                9: { cellWidth: 35 }
             },
             margin: { left: margin, right: margin },
-            pageBreak: 'auto' // Permite romper tabla si es muy larga
+            pageBreak: 'auto'
         });
 
-        // Actualizar cursor para el siguiente paciente
-        cursorY = doc.lastAutoTable.finalY + 15; // 15mm de separación
+        cursorY = doc.lastAutoTable.finalY + 15;
     }
 
-    doc.save("Reporte_Consolidado.pdf");
+    doc.save(`Reporte_Pacientes_${todayStr.replace(/\//g, '-')}.pdf`);
+}
+
+function formatDateLocal(isoDate) {
+    if (!isoDate) return "";
+    // Asumiendo formato YYYY-MM-DD del backend
+    if (isoDate.includes('-')) {
+        const parts = isoDate.split('-');
+        if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return isoDate;
 }
 
 // NUEVO USUARIO
