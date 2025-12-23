@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seguimiento de Pacientes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script lang="javascript" src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+
+<body>
+
+    <!-- LOGIN -->
+    <div id="login-screen" class="screen active">
+        <div class="login-card">
+            <span class="material-icons logo-icon">medical_services</span>
+            <h1>MediSeguimiento</h1>
+            <h2 style="font-size: 1rem; color: #64748b; margin-bottom: 20px; font-weight: 500;">Dr. Mario García</h2>
+            <h2 style="margin-bottom: 5px;">Acceso Profesional</h2>
+            <form id="login-form">
+                <div class="input-group">
+                    <label>Usuario</label>
+                    <input type="text" id="username" placeholder="Tu usuario" required>
+                </div>
+                <div class="input-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn-primary btn-block">Ingresar</button>
+            </form>
+            <div style="margin-top: 20px;">
+                <p>¿No tienes cuenta?</p>
+                <button id="btn-go-register" class="btn-small outline dark" style="width: 100%; margin-top: 10px;">Crear
+                    Cuenta Nueva</button>
+            </div>
+            <div id="login-error" class="error-msg"></div>
+        </div>
+    </div>
+
+    <!-- REGISTRO USUARIO -->
+    <div id="register-screen" class="screen">
+        <div class="login-card">
+            <h2>Crear Cuenta</h2>
+            <p>Registro de Estudiante</p>
+            <form id="register-user-form">
+                <div class="input-group">
+                    <label>Nombre Completo</label>
+                    <input type="text" id="reg-nombre" required>
+                </div>
+                <div class="input-group">
+                    <label>Usuario (minúsculas)</label>
+                    <input type="text" id="reg-user" required>
+                </div>
+                <div class="input-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="reg-pass" required>
+                </div>
+                <div class="input-group">
+                    <label>Puesto de Salud</label>
+                    <select id="reg-puesto" class="input-style" style="padding: 14px;" required>
+                        <option value="">Seleccione Puesto...</option>
+                        <option value="CAP. Centro de Atención Permanente">CAP. Centro de Atención Permanente</option>
+                        <!-- Puestos omitidos por brevedad, se llenarán igual -->
+                        <option value="PS. Lo de Diéguez">PS. Lo de Diéguez</option>
+                        <option value="PS. Los Verdes">PS. Los Verdes</option>
+                        <option value="PS. El Cerrito">PS. El Cerrito</option>
+                        <option value="PS. Puerta del Señor">PS. Puerta del Señor</option>
+                        <option value="PS. Rabanales">PS. Rabanales</option>
+                        <option value="PS. Pavón">PS. Pavón</option>
+                        <option value="PS. Crucitas">PS. Crucitas</option>
+                        <option value="PS. Joya Verde">PS. Joya Verde</option>
+                        <option value="PS. Monte Bello">PS. Monte Bello</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary btn-block">Registrarme</button>
+                <button type="button" id="btn-cancel-register" class="btn-small outline dark"
+                    style="width: 100%; margin-top: 10px;">Cancelar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- APP PRINCIPAL -->
+    <div id="app-container" class="screen">
+        <header class="navbar">
+            <div class="nav-brand">
+                <span class="material-icons" style="font-size: 32px;">local_hospital</span>
+                <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                    <span style="font-size: 1.2rem; font-weight: 800;">MediSeguimiento</span>
+                    <span style="font-size: 0.85rem; color: #64748b; font-weight: 500;">Dr. Mario García</span>
+                </div>
+            </div>
+            <button id="logout-btn" class="btn-icon"><span class="material-icons">logout</span></button>
+        </header>
+
+        <!-- DASHBOARD ADMIN (NUEVO) -->
+        <!-- DASHBOARD ADMIN (NUEVO v3.0 Layout 2 Col) -->
+        <div id="admin-dashboard-panel" class="hidden" style="padding: 20px;">
+
+            <!-- Columna Izquierda: Visualización de Datos -->
+            <div class="dashboard-left-col">
+                <div class="admin-stats-grid">
+                    <div class="stat-card">
+                        <span class="material-icons stat-icon">people</span>
+                        <div class="stat-info">
+                            <label>Total Pacientes</label>
+                            <h3 id="stat-total-pacientes">0</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="material-icons stat-icon" style="color: #ef233c;">favorite</span>
+                        <div class="stat-info">
+                            <label>Top Condición</label>
+                            <h3 id="stat-top-condicion" style="font-size: 1rem;">-</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <span class="material-icons stat-icon" style="color: #fb8500;">medication</span>
+                        <div class="stat-info">
+                            <label>Cambios Tx (Última Visita)</label>
+                            <h3 id="stat-cambios-tx">0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-wrapper"
+                        style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <h4 style="margin-bottom: 10px; color: #1b263b; text-align: center;">Diagnósticos (Distribución)
+                        </h4>
+                        <canvas id="chart-condiciones"></canvas>
+                    </div>
+                    <div class="chart-wrapper"
+                        style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <h4 style="margin-bottom: 10px; color: #1b263b; text-align: center;">Control (Cambios Tx)</h4>
+                        <canvas id="chart-seguimiento"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna Derecha: Panel de Control y Gestión -->
+            <div class="dashboard-right-col">
+                <h3
+                    style="color: #1b263b; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                    Gestión de Pacientes</h3>
+
+                <!-- El Filtro se MUEVE aquí -->
+                <div id="admin-filter-container-moved" class="input-group"
+                    style="background: #f1f5f9; padding: 10px; border-radius: 8px;">
+                    <label style="color: #0d47a1; font-weight: bold;">Supervisión: Filtrar por Puesto</label>
+                    <select id="admin-puesto-filter" class="input-style">
+                        <option value="TODOS">-- Todos los Puestos --</option>
+                        <option value="CAP. Centro de Atención Permanente">CAP. Centro de Atención Permanente</option>
+                        <option value="PS. Lo de Diéguez">PS. Lo de Diéguez</option>
+                        <option value="PS. Los Verdes">PS. Los Verdes</option>
+                        <option value="PS. El Cerrito">PS. El Cerrito</option>
+                        <option value="PS. Puerta del Señor">PS. Puerta del Señor</option>
+                        <option value="PS. Rabanales">PS. Rabanales</option>
+                        <option value="PS. Pavón">PS. Pavón</option>
+                        <option value="PS. Crucitas">PS. Crucitas</option>
+                        <option value="PS. Joya Verde">PS. Joya Verde</option>
+                        <option value="PS. Monte Bello">PS. Monte Bello</option>
+                    </select>
+                </div>
+
+                <div class="selection-tools" style="margin-top: 15px;">
+                    <button id="btn-select-all" class="btn-small">Seleccionar Todos</button>
+                    <button id="btn-deselect-all" class="btn-small outline dark">Deseleccionar</button>
+                </div>
+
+                <!-- Reutilizamos el contenedor de checklist pero con otro ID para no conflictuar si no se borra el viejo -->
+                <div id="patient-checklist-admin" class="checklist-container" style="height: 300px; max-height: 400px;">
+                    <div class="empty-msg">Cargando pacientes...</div>
+                </div>
+
+                <div class="report-actions" style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+                    <button id="btn-generate-pdf" class="btn-primary btn-block">
+                        <span class="material-icons">picture_as_pdf</span> Reporte PDF
+                    </button>
+                    <button id="btn-export-excel" class="btn-small outline dark"
+                        style="width: 100%; border: 1px solid #1b263b; color: #1b263b; font-weight: 600; padding: 12px;">
+                        <span class="material-icons"
+                            style="font-size:18px; vertical-align:middle; color: #2e7d32;">table_view</span> Descargar
+                        Excel Real
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <nav class="bottom-nav" id="main-nav">
+            <button class="nav-item active" data-target="registro-view">
+                <span class="material-icons">edit_note</span>
+                <span>Registro</span>
+            </button>
+            <button class="nav-item" data-target="reportes-view">
+                <span class="material-icons">description</span>
+                <span>Reportes</span>
+            </button>
+        </nav>
+
+        <!-- REGISTRO -->
+        <main id="registro-view" class="view active-view">
+            <div class="card">
+                <div class="header-row">
+                    <h2>Nuevo Registro</h2>
+                </div>
+                <div class="toggle-type">
+                    <button class="type-btn active" id="btn-existente" onclick="togglePatientType('existente')">Paciente
+                        Recurrente</button>
+                    <button class="type-btn" id="btn-nuevo" onclick="togglePatientType('nuevo')">Nuevo Paciente</button>
+                </div>
+                <form id="registro-form">
+                    <div id="register-visit-puesto-container" class="input-group hidden"
+                        style="background: #e3f2fd; padding: 10px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #90caf9;">
+                        <label style="color: #0d47a1; font-weight: bold;">Registrar para Puesto:</label>
+                        <select id="register-visit-puesto" class="input-style">
+                            <option value="">Seleccione Puesto...</option>
+                            <option value="CAP. Centro de Atención Permanente">CAP. Centro de Atención Permanente
+                            </option>
+                            <option value="PS. Lo de Diéguez">PS. Lo de Diéguez</option>
+                            <option value="PS. Los Verdes">PS. Los Verdes</option>
+                            <option value="PS. El Cerrito">PS. El Cerrito</option>
+                            <option value="PS. Puerta del Señor">PS. Puerta del Señor</option>
+                            <option value="PS. Rabanales">PS. Rabanales</option>
+                            <option value="PS. Pavón">PS. Pavón</option>
+                            <option value="PS. Crucitas">PS. Crucitas</option>
+                            <option value="PS. Joya Verde">PS. Joya Verde</option>
+                            <option value="PS. Monte Bello">PS. Monte Bello</option>
+                        </select>
+                    </div>
+                    <div id="section-existente" class="form-section">
+                        <label>Buscar Paciente</label>
+                        <select id="select-paciente" class="input-style">
+                            <option value="">Cargando...</option>
+                        </select>
+                    </div>
+                    <div id="section-nuevo" class="form-section hidden">
+                        <div class="input-group"><label>Nombre</label><input type="text" id="new-nombre"
+                                class="input-style"></div>
+                        <div class="input-group"><label>DPI</label><input type="text" id="new-dpi" class="input-style">
+                        </div>
+                    </div>
+                    <div class="input-group"><label>Fecha</label><input type="date" id="fecha-visita"
+                            class="input-style" required></div>
+                    <div class="input-group">
+                        <label>Diagnóstico</label>
+                        <select id="condicion" class="input-style" required>
+                            <option value="DM">DM</option>
+                            <option value="Hipertensión (HTA)">Hipertensión</option>
+                            <option value="DM + HTA">DM + HTA</option>
+                            <option value="DM + HTA + IRC">DM + HTA + IRC</option>
+                            <option value="IRC">IRC</option>
+                            <option value="DM + IRC">DM + IRC</option>
+                            <option value="Asma/EPOC">Asma / EPOC</option>
+                            <option value="Desnutrición">Desnutrición</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+                    <div class="section-title">Signos Vitales</div>
+                    <div class="grid-vitals">
+                        <div class="input-group"><label>PA</label><input type="text" id="vital-pa" class="input-style">
+                        </div>
+                        <div class="input-group"><label>FC</label><input type="number" id="vital-fc"
+                                class="input-style"></div>
+                        <div class="input-group"><label>Temp</label><input type="number" step="0.1" id="vital-temp"
+                                class="input-style"></div>
+                        <div class="input-group"><label>FR</label><input type="number" id="vital-fr"
+                                class="input-style"></div>
+                        <div class="input-group"><label>SpO2</label><input type="number" id="vital-spo2"
+                                class="input-style"></div>
+                    </div>
+                    <div class="section-title">Tratamiento</div>
+                    <div class="input-group"><label>Tratamiento</label><textarea id="tratamiento"
+                            class="input-style"></textarea></div>
+                    <div class="input-group"><label>¿Cambios?</label><select id="cambios" class="input-style">
+                            <option value="No">No</option>
+                            <option value="Si">Sí</option>
+                        </select></div>
+                    <div class="input-group"><label>Comentarios</label><textarea id="comentarios"
+                            class="input-style"></textarea></div>
+                    <button type="submit" class="btn-primary btn-block">Guardar</button>
+                </form>
+            </div>
+        </main>
+
+        <!-- REPORTES (ADMIN Y USER) -->
+        <main id="reportes-view" class="view">
+            <div class="card">
+                <h2 id="report-title">Generar Reportes</h2>
+
+                <!-- FILTRO ADMIN -->
+                <div id="admin-filter-container" class="input-group hidden"
+                    style="background: #e3f2fd; padding: 10px; border-radius: 8px; margin-bottom: 20px;">
+                    <label style="color: #0d47a1; font-weight: bold;">Supervisión: Filtrar por Puesto</label>
+                    <select id="admin-puesto-filter" class="input-style">
+                        <option value="TODOS">-- Todos los Puestos --</option>
+                        <option value="CAP. Centro de Atención Permanente">CAP. Centro de Atención Permanente</option>
+                        <option value="PS. Lo de Diéguez">PS. Lo de Diéguez</option>
+                        <option value="PS. Los Verdes">PS. Los Verdes</option>
+                        <option value="PS. El Cerrito">PS. El Cerrito</option>
+                        <option value="PS. Puerta del Señor">PS. Puerta del Señor</option>
+                        <option value="PS. Rabanales">PS. Rabanales</option>
+                        <option value="PS. Pavón">PS. Pavón</option>
+                        <option value="PS. Crucitas">PS. Crucitas</option>
+                        <option value="PS. Joya Verde">PS. Joya Verde</option>
+                        <option value="PS. Monte Bello">PS. Monte Bello</option>
+                    </select>
+                </div>
+
+                <div class="selection-tools">
+                    <button id="btn-select-all" class="btn-small">Seleccionar Todos</button>
+                    <button id="btn-deselect-all" class="btn-small outline dark">Deseleccionar</button>
+                </div>
+
+                <div id="patient-checklist" class="checklist-container">
+                    <div class="empty-msg">Cargando pacientes...</div>
+                </div>
+
+                <div class="report-actions">
+                    <button id="btn-generate-pdf" class="btn-primary btn-block">
+                        <span class="material-icons">picture_as_pdf</span> Descargar Reporte PDF
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- LOADING -->
+    <div id="loading" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p id="loading-text">Procesando...</p>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
