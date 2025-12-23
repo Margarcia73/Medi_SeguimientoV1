@@ -235,9 +235,15 @@
                     </div>
                     <div id="section-existente" class="form-section">
                         <label>Buscar Paciente</label>
-                        <select id="select-paciente" class="input-style">
-                            <option value="">Cargando...</option>
-                        </select>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="select-paciente" class="input-style" style="flex: 1;">
+                                <option value="">Cargando...</option>
+                            </select>
+                            <button type="button" id="btn-view-history" class="btn-small outline dark"
+                                title="Ver Historial Clínico">
+                                <span class="material-icons">history</span>
+                            </button>
+                        </div>
                     </div>
                     <div id="section-nuevo" class="form-section hidden">
                         <div class="input-group"><label>Nombre</label><input type="text" id="new-nombre"
@@ -328,6 +334,19 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- MODAL HISTORIAL -->
+    <div id="history-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Historial Clínico</h3>
+                <button id="btn-close-history" class="btn-icon"><span class="material-icons">close</span></button>
+            </div>
+            <div id="history-content" class="modal-body">
+                <p>Cargando...</p>
+            </div>
+        </div>
     </div>
 
     <!-- LOADING -->

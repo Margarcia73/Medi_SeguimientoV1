@@ -454,6 +454,71 @@ document.getElementById('registro-form').addEventListener('submit', (e) => {
     });
 });
 
+// HISTORIAL MODAL
+const historyModal = document.getElementById('history-modal');
+const btnViewHistory = document.getElementById('btn-view-history');
+const btnCloseHistory = document.getElementById('btn-close-history');
+
+if (btnViewHistory) {
+    btnViewHistory.addEventListener('click', () => {
+        const patientId = document.getElementById('select-paciente').value;
+        if (!patientId) return alert("Por favor seleccione un paciente primero.");
+
+        showLoading("Cargando historial...");
+        postData({ action: 'getHistoryBatch', ids: patientId })
+            .then(resp => {
+                hideLoading();
+                if (resp.success && resp.data[patientId]) {
+                    renderHistoryModal(resp.data[patientId]);
+                } else {
+                    alert("No se pudo obtener el historial.");
+                }
+            });
+    });
+}
+
+if (btnCloseHistory) {
+    btnCloseHistory.addEventListener('click', () => {
+        historyModal.classList.add('hidden');
+    });
+}
+
+function renderHistoryModal(patientData) {
+    const container = document.getElementById('history-content');
+    const visitas = patientData.visitas || [];
+    const pInfo = patientData.info;
+
+    // Título del paciente
+    let html = `<div style="margin-bottom:15px; color:#0056b3;">
+        <strong>Paciente:</strong> ${pInfo.nombre}<br>
+        <small>${pInfo.puesto}</small>
+    </div>`;
+
+    if (visitas.length === 0) {
+        html += '<p>No hay visitas registradas.</p>';
+    } else {
+        // Ordenar: más reciente primero
+        visitas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+        visitas.forEach(v => {
+            html += `
+            <div class="history-item">
+                <div class="history-date">
+                    <span>${v.fecha}</span>
+                    <span style="font-weight:normal; font-size:0.85rem;">${v.diagnostico}</span>
+                </div>
+                <div class="history-detail"><strong>Signos:</strong> PA: ${v.pa} | FC: ${v.fc} | SpO2: ${v.spo2}%</div>
+                <div class="history-detail"><strong>Tx:</strong> ${v.tratamiento || '-'}</div>
+                <div class="history-detail"><strong>Cambios:</strong> ${v.cambios}</div>
+                <div class="history-detail"><strong>Obs:</strong> ${v.comentarios || '-'}</div>
+            </div>`;
+        });
+    }
+
+    container.innerHTML = html;
+    historyModal.classList.remove('hidden');
+}
+
 // PDF
 document.getElementById('btn-select-all').addEventListener('click', () => { document.querySelectorAll('.pat-check').forEach(c => c.checked = true); });
 document.getElementById('btn-deselect-all').addEventListener('click', () => { document.querySelectorAll('.pat-check').forEach(c => c.checked = false); });
