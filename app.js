@@ -1,5 +1,5 @@
 // CONFIGURACIÓN
-const API_URL = "https://script.google.com/macros/s/AKfycbxuw4fGqJFUT0QbG5i6c-l0NaPlfTF06wigvn5A66TnCnMk4p5ef8QxKsG9lPa2lFtX/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzZ83x5YkIsf1Kx_cmuPdB_JwK_nlteSb-ecM48FQS05kk9DPvacJQtvYba1AG6Trzu/exec";
 
 let appState = {
     user: null,
@@ -442,7 +442,8 @@ document.getElementById('registro-form').addEventListener('submit', (e) => {
         condicion: document.getElementById('condicion').value,
         fc: document.getElementById('vital-fc').value, pa: document.getElementById('vital-pa').value,
         temp: document.getElementById('vital-temp').value, fr: document.getElementById('vital-fr').value,
-        spo2: document.getElementById('vital-spo2').value, tratamiento: document.getElementById('tratamiento').value,
+        spo2: document.getElementById('vital-spo2').value, glucosa: document.getElementById('vital-glucosa').value,
+        tratamiento: document.getElementById('tratamiento').value,
         cambios: document.getElementById('cambios').value, comentarios: document.getElementById('comentarios').value
     };
     showLoading('Guardando...');
@@ -507,9 +508,9 @@ function renderHistoryModal(patientData) {
                     <span>${v.fecha}</span>
                     <span style="font-weight:normal; font-size:0.85rem;">${v.diagnostico}</span>
                 </div>
-                <div class="history-detail"><strong>Signos:</strong> PA: ${v.pa} | FC: ${v.fc} | SpO2: ${v.spo2}%</div>
+                <div class="history-detail"><strong>Signos:</strong> PA: ${v.pa} | FC: ${v.fc} | SpO2: ${v.spo2}% | Glu: ${v.glucosa || '-'}</div>
                 <div class="history-detail"><strong>Tx:</strong> ${v.tratamiento || '-'}</div>
-                <div class="history-detail"><strong>Cambios:</strong> ${v.cambios}</div>
+                <div class="history-detail"><strong>Cambios:</strong> ${v.cambios || '-'}</div>
                 <div class="history-detail"><strong>Obs:</strong> ${v.comentarios || '-'}</div>
             </div>`;
         });
@@ -590,18 +591,30 @@ function generatePDF(dataMap) {
         cursorY += 5; // Espacio entre titulo y tabla
 
         // Cuerpo tabla
-        const body = historial.map(h => [h.fecha, h.diagnostico, h.pa, h.fc, h.fr, h.spo2, h.tratamiento, h.cambios, h.comentarios]);
+        const body = historial.map(h => [
+            h.fecha,
+            h.diagnostico,
+            h.pa,
+            h.fc,
+            h.fr,
+            h.spo2,
+            h.glucosa || '-', // Nueva columna
+            h.tratamiento,
+            h.cambios || '-',
+            h.comentarios
+        ]);
 
         doc.autoTable({
             startY: cursorY,
-            head: [['Fecha', 'Condición', 'PA', 'FC', 'FR', 'SpO2', 'Tratamiento', 'Cambios?', 'Obs']],
+            head: [['Fecha', 'Condición', 'PA', 'FC', 'FR', 'SpO2', 'Glu', 'Tratamiento', 'Cambios', 'Obs']],
+            // Header actualizado
             body: body,
             theme: 'grid',
             styles: { fontSize: 8, cellPadding: 2 },
             headStyles: { fillColor: [65, 90, 119] },
             columnStyles: {
-                6: { cellWidth: 50 }, // Tratamiento más ancho
-                8: { cellWidth: 40 }  // Obs más ancho
+                7: { cellWidth: 45 }, // Tratamiento (Indice movido por nueva col) -> 7 es Tratamiento
+                9: { cellWidth: 35 }  // Obs -> 9 es Obs
             },
             margin: { left: margin, right: margin },
             pageBreak: 'auto' // Permite romper tabla si es muy larga
